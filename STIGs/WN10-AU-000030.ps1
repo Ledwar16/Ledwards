@@ -1,3 +1,29 @@
+<#
+.SYNOPSIS
+This script configures Windows audit policies to enable logging of both successful and failed Logon and Logoff events, ensuring compliance with the STIG WN10-AU-000030.
+.NOTES
+    Author          : LaDarius Edwards
+    LinkedIn        : www.linkedin.com/in/ladarius-edwards
+    GitHub          : https://github.com/Ledwar16/Ledwards/
+    Date Created    : 2024-04-09
+    Last Modified   : 2025-04-09
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN10-AU-000030
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Example syntax:
+    PS C:\> .\WN10-AU-000030.ps1 
+#>
+
+
 # Ensure running as Administrator
 if (-not (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies")) {
     Write-Error "Please run PowerShell as Administrator!"

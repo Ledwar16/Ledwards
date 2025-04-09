@@ -1,3 +1,29 @@
+<#
+.SYNOPSIS
+   This script sets the password history policy on a Windows machine to remember the last 24 passwords by modifying the appropriate registry key, ensuring compliance with the STIG requirement WN10-AC-000020.
+
+.NOTES
+    Author          : LaDarius Edwards
+    LinkedIn        : www.linkedin.com/in/ladarius-edwards
+    GitHub          : https://github.com/Ledwar16/Ledwards/
+    Date Created    : 2024-04-09
+    Last Modified   : 2025-04-09
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN10-AC-000020
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+.USAGE
+    Example syntax:
+    PS C:\> .\WN10-AC-000020.ps1 
+#>
+
 # Ensure running as Administrator
 if (-not (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies")) {
     Write-Error "Please run PowerShell as Administrator!"

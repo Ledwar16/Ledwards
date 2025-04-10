@@ -72,4 +72,3 @@ Write-Host " - Minimum password age: 0 days"
 Write-Host " - Minimum password length: 0"
 Write-Host " - Complexity requirements: Disabled"
 Write-Host " - Store passwords using reversible encryption: Disabled"
-

@@ -24,24 +24,52 @@
     PS C:\> .\WN10-AC-000020.ps1 
 #>
 
-# Ensure running as Administrator
-if (-not (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies")) {
-    Write-Error "Please run PowerShell as Administrator!"
+# Ensure the script is running with administrative privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "❌ This script must be run as Administrator."
     exit
 }
 
-# Set Enforce Password History to 24 (this ensures 24 previous passwords are remembered)
-$regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-$regValueName = "PasswordHistorySize"
-$regValue = 24
+# Temporary file to store exported security policy
+$tempFile = "$env:TEMP\secpol.cfg"
 
-# Check if the registry key exists, create it if not
-if (-not (Test-Path $regKey)) {
-    New-Item -Path $regKey -Force
+# Export current local security policy
+secedit /export /cfg $tempFile
+
+# Read and update password policies
+$updatedPolicy = Get-Content $tempFile | ForEach-Object {
+    if ($_ -match "^PasswordHistorySize") {
+        "PasswordHistorySize = 24"
+    } elseif ($_ -match "^MaximumPasswordAge") {
+        "MaximumPasswordAge = 42"
+    } elseif ($_ -match "^MinimumPasswordAge") {
+        "MinimumPasswordAge = 0"
+    } elseif ($_ -match "^MinimumPasswordLength\s*=") {
+        "MinimumPasswordLength = 0"
+    } elseif ($_ -match "^PasswordComplexity") {
+        "PasswordComplexity = 0"
+    } elseif ($_ -match "^ClearTextPassword") {
+        "ClearTextPassword = 0"
+    } else {
+        $_
+    }
 }
 
-# Set the value for Password History Size (24 passwords)
-Set-ItemProperty -Path $regKey -Name $regValueName -Value $regValue
+# Save the modified policy
+$updatedPolicy | Set-Content $tempFile
 
-# Confirm the change was applied
-Write-Host "Password history set to 24 successfully."
+# Apply the new policy settings
+secedit /configure /db secedit.sdb /cfg $tempFile /areas SECURITYPOLICY
+
+# Cleanup
+Remove-Item $tempFile -Force
+
+Write-Host "`n✅ Password policy applied successfully:"
+Write-Host " - Enforce password history: 24"
+Write-Host " - Maximum password age: 42 days"
+Write-Host " - Minimum password age: 0 days"
+Write-Host " - Minimum password length: 0"
+Write-Host " - Complexity requirements: Disabled"
+Write-Host " - Store passwords using reversible encryption: Disabled"
+

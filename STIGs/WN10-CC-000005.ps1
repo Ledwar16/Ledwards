@@ -24,24 +24,55 @@
     PS C:\> .\WN10-CC-000005.ps1 
 #>
 
-# Ensure running as Administrator
-if (-not (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies")) {
-    Write-Error "Please run PowerShell as Administrator!"
+# Ensure Administrator privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "This script must be run as Administrator!"
     exit
 }
 
-# Set Password Complexity Requirement to enabled
-$regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-$regValueName = "DisablePasswordComplexity"
-$regValue = 0  # 0 means enabled
+# Define the config path
+$tempCfg = "$env:TEMP\secpol.cfg"
 
-# Check if the registry key exists, create it if not
-if (-not (Test-Path $regKey)) {
-    New-Item -Path $regKey -Force
+# Export current security policy
+secedit /export /cfg $tempCfg
+
+# Read current config and apply modifications
+$config = Get-Content $tempCfg
+
+# Define a hashtable of changes (partial example for brevity)
+$changes = @{
+    "EnableAdminAccount"        = "1"
+    "EnableGuestAccount"        = "0"
+    "LimitBlankPasswordUse"     = "1"
+    "NewAdministratorName"      = "ledwar"
+    "NewGuestName"              = "Guest"
+    "ClearPageFileAtShutdown"   = "0"
+    "ForceLogoffWhenHourExpire" = "0"
+    "CachedLogonsCount"         = "10"
+    "PromptForPasswordWhenUserNameIsNotKnown" = "1"
+    "DontDisplayLastUserName"   = "1"
 }
 
-# Set the value for Password Complexity
-Set-ItemProperty -Path $regKey -Name $regValueName -Value $regValue
+# Apply changes to the config
+$config = $config | ForEach-Object {
+    $line = $_
+    foreach ($key in $changes.Keys) {
+        if ($line -match "^$key\s*=") {
+            $line = "$key = $($changes[$key])"
+        }
+    }
+    $line
+}
 
-# Confirm the change was applied
-Write-Host "Password complexity requirement enabled successfully."
+# Write updated config
+$config | Set-Content $tempCfg
+
+# Apply the new security policy
+secedit /configure /db secedit.sdb /cfg $tempCfg /areas SECURITYPOLICY
+
+# Cleanup
+Remove-Item $tempCfg -Force
+
+Write-Host "`Local Security Policy has been updated successfully."
+

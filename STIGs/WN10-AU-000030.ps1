@@ -24,32 +24,44 @@ This script configures Windows audit policies to enable logging of both successf
 #>
 
 
-# Ensure running as Administrator
-if (-not (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies")) {
-    Write-Error "Please run PowerShell as Administrator!"
+# Ensure script is run as Administrator
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Error "This script must be run as Administrator."
     exit
 }
 
-# Function to safely apply AuditPol settings
 function Set-AuditPolicy {
-    param(
+    param (
         [string]$subcategory,
-        [string]$successMode,
-        [string]$failureMode
+        [string]$success = "nochange",
+        [string]$failure = "nochange"
     )
 
-    try {
-        # Apply the audit policy to the subcategory
-        Write-Host "Setting $subcategory with Success=$successMode and Failure=$failureMode"
-        AuditPol /set /subcategory:$subcategory /success:$successMode /failure:$failureMode
-    }
-    catch {
-        Write-Error "Failed to apply $subcategory policy with Success=$successMode and Failure=$failureMode"
-    }
+    Write-Host "Setting $subcategory | Success: $success | Failure: $failure"
+    AuditPol /set /subcategory:"$subcategory" /success:$success /failure:$failure
 }
 
-# Set Logon and Logoff Audit Policies to Success and Failure
-Set-AuditPolicy -subcategory "Logon" -successMode "enable" -failureMode "enable"
-Set-AuditPolicy -subcategory "Logoff" -successMode "enable" -failureMode "enable"
+# Set Logon and Logoff to Success and Failure
+Set-AuditPolicy -subcategory "Logon" -success "enable" -failure "enable"
+Set-AuditPolicy -subcategory "Logoff" -success "enable" -failure "enable"
 
-Write-Host "Audit Logon/Logoff policy configuration complete."
+# Set all others to Not Configured (equivalent to disabling Success/Failure auditing)
+$notConfigured = @(
+    "Account Lockout",
+    "User / Device Claims",
+    "Group Membership",
+    "IPsec Extended Mode",
+    "IPsec Main Mode",
+    "IPsec Quick Mode",
+    "Network Policy Server",
+    "Other Logon/Logoff Events",
+    "Special Logon"
+)
+
+foreach ($subcategory in $notConfigured) {
+    Set-AuditPolicy -subcategory $subcategory -success "disable" -failure "disable"
+}
+
+Write-Host "`Audit policy updated successfully according to specified configuration."
+
